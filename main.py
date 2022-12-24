@@ -1,11 +1,33 @@
 from names import first_male_names, first_female_names, british_surnames
 import random
 import itertools
+import time
 
 
 class Humanoid:
     def __init__(self) -> None:
         pass
+
+
+class Relationship:
+    def __init__(self, recipient) -> None:
+        self.length = 0
+        self.recipient = recipient
+
+
+class Lover(Relationship):
+    def __init__(self, recipient) -> None:
+        super().__init__(recipient)
+
+
+class Partner(Relationship):
+    def __init__(self, recipient) -> None:
+        super().__init__(recipient)
+
+
+class Married(Relationship):
+    def __init__(self, recipient) -> None:
+        super().__init__(recipient)
 
 
 class Human(Humanoid):
@@ -25,10 +47,9 @@ class Human(Humanoid):
         self.name = self.generateName()
         self.isPregnant = False
         self.isMarried = isMarried
-        self.partner = ""
-        self.partnerLength = 0
-        self.lover = ""
-        self.loverLength = 0
+        self.married = Married("")
+        self.partner = Partner("")
+        self.lover = Lover("")
         self.isDead = False
         self.maidenName = self.name
 
@@ -52,7 +73,10 @@ class Human(Humanoid):
             self.age,
             "\n",
             "lover: ",
-            "None" if type(self.lover) == str else self.lover.name,
+            "None" if type(self.lover.recipient) == str else self.lover.recipient.name,
+            "\n",
+            "lover time: ",
+            self.lover.length,
             "\n",
             "pregnant: ",
             self.isPregnant,
@@ -107,7 +131,11 @@ class Human(Humanoid):
         if self.gender == "m":
             return
 
-        elif self.age[0] >= self.breedAge and not self.isPregnant and self.lover:
+        elif (
+            self.age[0] >= self.breedAge
+            and not self.isPregnant
+            and type(self.lover.recipient) != str
+        ):
             pregnancyChance = random.uniform(0.15, 0.25)
 
             if random.random() < pregnancyChance:
@@ -117,14 +145,14 @@ class Human(Humanoid):
         elif self.currentPregnancyLength >= self.maxPregnancyLength:
             self.isPregnant = False
             self.currentPregnancyLength = 0
-            self.giveBirth([self, self.lover])
+            self.giveBirth([self, self.lover.recipient])
         elif self.isPregnant:
             self.currentPregnancyLength = self.currentPregnancyLength + 1
 
     def deathCheck(self):
         if not self.isDead and self.age[0] >= self.maxAge:
             if self.isPregnant and self.currentPregnancyLength >= 8:
-                self.giveBirth([self, self.lover])
+                self.giveBirth([self, self.lover.recipient])
             self.isDead = True
         else:
             if self.age[1] >= 12:
@@ -140,24 +168,31 @@ class Human(Humanoid):
             self.relationshipCheck()
             self.pregnancyCheck()
             self.deathCheck()
-            self.getStats()
+            # self.getStats()
 
     def giveBirth(self, parents):
         newHuman = Human(False, parents, False, False)
         entities.append(newHuman)
 
     def relationshipCheck(self):
-        if self.lover == "" and self.age[0] >= self.breedAge:
+        if type(self.lover.recipient) != str:
+            self.lover.length = self.lover.length + 1
+        if type(self.partner.recipient) != str:
+            self.partner.length = self.partner.length + 1
+        if type(self.married.recipient) != str:
+            self.married.length = self.married.length + 1
+        if self.lover.recipient == "" and self.age[0] >= self.breedAge:
             gender = "m" if self.gender == "f" else "f"
             availableLovers = [
                 entity
                 for entity in entities
-                if entity.gender == gender and entity.lover == ""
+                if entity.gender == gender and entity.lover.recipient == ""
             ]
             if availableLovers:
-                self.lover = random.choice(availableLovers)
+                self.lover.recipient = random.choice(availableLovers)
+
         # elif self.partner == "" and self.loverLength == 4:
-        #     self.partner == self.lover
+        #      self.partner == self.lover
 
 
 def cycle():
@@ -167,21 +202,33 @@ def cycle():
 
 
 def mainLoop():
-
+    seedAmount = 50
+    months = 1000
     global entities
     entities = []
-    seedM = Human("m", "seed", True, True)
-    seedF = Human("f", "seed", True, True)
-    seedM.partner = seedF
-    seedF.partner = seedM
-    seedM.lover = seedF
-    seedF.lover = seedM
-    seedF.name[1] = seedF.partner.name[1]
-    entities.append(seedM)
-    entities.append(seedF)
-    for x in range(600):
+    for seed in range(seedAmount):
+        seedM = Human("m", "seed", True, True)
+        seedF = Human("f", "seed", True, True)
+        seedM.partner.recipient = seedF
+        seedF.partner.recipient = seedM
+        seedM.lover.recipient = seedF
+        seedF.lover.recipient = seedM
+        seedF.name[1] = seedF.partner.recipient.name[1]
+        entities.append(seedM)
+        entities.append(seedF)
+    for x in range(months):
         print("cycle: ", x)
         cycle()
+    living = [entity for entity in entities if entity.isDead == False]
+    dead = [entity for entity in entities if entity.isDead == True]
+    print("seed amount: ", seedAmount)
+    print("months: ", months)
+    print("years: ", months / 12)
+    print("living: ", len(living))
+    print("dead: ", len(dead))
+    print("total: ", len(entities))
 
 
+start_time = time.time()
 mainLoop()
+print("--- %s seconds ---" % (time.time() - start_time))
