@@ -351,36 +351,10 @@ def mainLoop():
                 os.remove(os.path.join(root, name))
 
     start_time = time.time()
-    seedAmount = 1000
+    seedAmount = 500
     months = 500
     global entities
     entities = {}
-
-    # if months > 1200:
-    #     chunkCyclesWhole = months / 1200
-    #     chunkCyclesRemainder = months % 1200
-
-    #     for month in range(math.floor(chunkCyclesWhole)):
-    #         generateSeeds(seedAmount)
-    #         progress(month + 1, chunkCyclesWhole, "cycle: " + str(month))
-    #         for x in range(1200):
-    #             progress(x, 1200, "cycle: " + str(x))
-    #             cycle()
-    #         save_object(entities, "entities/entities_" + str(month) + ".pkl")
-
-    #         entities.clear()
-    #     entities.clear()
-
-    #     generateSeeds(seedAmount)
-    #     for ex in range(chunkCyclesRemainder):
-    #         progress(ex, chunkCyclesRemainder, "cycle: " + str(ex))
-    #         cycle()
-    #     save_object(
-    #         entities,
-    #         "entities/entities_" + str(math.floor(chunkCyclesWhole + 1)) + ".pkl",
-    #     )
-    #     entities.clear()
-    # else:
     generateSeeds(seedAmount)
 
     for month in range(months):
