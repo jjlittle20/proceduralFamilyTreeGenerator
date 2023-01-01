@@ -6,6 +6,7 @@ import sys
 import math
 import pickle
 import os
+from termcolor import colored
 
 professions = {
     "farmer": {"name": "farmer"},
@@ -45,7 +46,7 @@ class Married(Relationship):
 class Human(Humanoid):
     id_iter = itertools.count()
 
-    def __init__(self, gender, parents, isMarried=False, isSeed=False) -> None:
+    def __init__(self, gender, parents, isMarried=False, isSeed=False, age=0) -> None:
         super().__init__()
         self.id = next(self.id_iter)
         self.maxAge = 45
@@ -55,7 +56,7 @@ class Human(Humanoid):
         self.isSeed = isSeed
         self.parents = self.getParents(parents)
         self.gender = self.getGender(gender)
-        self.age = self.getAge()
+        self.age = self.getAge(age)
         self.name = self.generateName()
         self.isPregnant = False
         self.isMarried = isMarried
@@ -64,6 +65,8 @@ class Human(Humanoid):
         self.lover = Lover("")
         self.isDead = False
         self.maidenName = self.name
+        self.children = []
+        self.maxChildren = random.randint(0, 3)
 
     def getStats(self):
 
@@ -123,11 +126,12 @@ class Human(Humanoid):
         else:
             return random.choice(["m", "f"])
 
-    def getAge(self):
-        if self.isSeed:
+    def getAge(self, age):
+        if self.isSeed or age == -1:
             return [random.randint(self.breedAge, self.breedAge + 10), 0]
+
         else:
-            return [0, 0]
+            return [age, 0]
 
     def generateName(self):
         name = ["", ""]
@@ -137,7 +141,7 @@ class Human(Humanoid):
         else:
             name[0] = random.choice(first_female_names)
 
-        if self.isSeed:
+        if self.isSeed or self.parents[0] == "migrant":
             name[1] = random.choice(british_surnames).upper()
 
         else:
@@ -146,14 +150,13 @@ class Human(Humanoid):
         return name
 
     def pregnancyCheck(self):
-
+        if len(self.children) >= self.maxChildren:
+            return
         if self.gender == "m":
             return
 
         elif (
-            self.age[0] >= self.breedAge
-            and not self.isPregnant
-            and self.lover.id is not None
+            self.age[0] >= self.breedAge and not self.isPregnant and self.lover.id != ""
         ):
 
             pregnancyChance = random.uniform(0.15, 0.25)
@@ -182,11 +185,12 @@ class Human(Humanoid):
             else:
                 self.age[1] = self.age[1] + 1
 
-    def singleCycle(self):
+    def singleCycle(self, month):
 
         if self.isDead:
             return
         else:
+
             self.relationshipCheck()
             self.pregnancyCheck()
             self.deathCheck()
@@ -194,8 +198,9 @@ class Human(Humanoid):
 
     def giveBirth(self, parents):
 
-        newHuman = Human(False, parents, False, False)
+        newHuman = Human(False, parents, False, False, 0)
         entities[newHuman.id] = newHuman
+        self.children.append(newHuman.id)
 
     def relationshipCheck(self):
 
@@ -222,11 +227,22 @@ class Human(Humanoid):
                 self.lover.id = entities[choice].id
 
 
-def cycle():
+def cycle(month):
     global availableLoversM
     global availableLoversF
     availableLoversM = []
     availableLoversF = []
+    if month % 12 == 0:
+        migrants = random.randint(3, 8)
+        for migrant in range(migrants):
+            newHuman = Human(
+                False,
+                ["migrant", "migrant"],
+                False,
+                False,
+                0,
+            )
+            entities[newHuman.id] = newHuman
 
     for entity in entities:
         lenM = len(availableLoversM)
@@ -250,7 +266,7 @@ def cycle():
 
     entitiesCopy = entities.copy()
     for key in entitiesCopy:
-        entitiesCopy[key].singleCycle()
+        entitiesCopy[key].singleCycle(month)
     availableLoversF.clear()
     availableLoversM.clear()
 
@@ -275,8 +291,8 @@ def save_object(obj, filename):
 
 def generateSeeds(seedAmount):
     for seed in range(seedAmount):
-        seedM = Human("m", "seed", True, True)
-        seedF = Human("f", "seed", True, True)
+        seedM = Human("m", "seed", True, True, 0)
+        seedF = Human("f", "seed", True, True, 0)
         seedM.partner.id = seedF.id
         seedF.partner.id = seedM.id
         seedM.lover.id = seedF.id
@@ -286,7 +302,43 @@ def generateSeeds(seedAmount):
         seedF.name[1] = entities[seedF.partner.id].name[1]
 
 
-# def createFamilyTree():
+def nextTreeLevel(children, currentIndent, entitiesDict):
+    if len(children) > 0:
+        for child in children:
+            if entitiesDict[child].isDead:
+
+                print(
+                    colored(currentIndent + " ".join(entitiesDict[child].name), "red")
+                )
+            else:
+                print(
+                    colored(currentIndent + " ".join(entitiesDict[child].name), "green")
+                )
+            nextTreeLevel(
+                entitiesDict[child].children, currentIndent + "-", entitiesDict
+            )
+
+
+def createFamilyTree(entitiesDict):
+
+    currentIndent = ""
+    seedFemales = [
+        (key)
+        for (key) in entitiesDict
+        if entitiesDict[key].isSeed == True and entitiesDict[key].gender == "f"
+    ]
+    for entity in seedFemales:
+        if entitiesDict[entity].isDead:
+
+            print(colored(currentIndent + " ".join(entitiesDict[entity].name), "red"))
+        else:
+            print(colored(currentIndent + " ".join(entitiesDict[entity].name), "green"))
+        nextTreeLevel(entitiesDict[entity].children, currentIndent + "-", entitiesDict)
+
+
+def dictMerge(dict1, dict2):
+    res = {**dict1, **dict2}
+    return res
 
 
 def mainLoop():
@@ -299,42 +351,43 @@ def mainLoop():
                 os.remove(os.path.join(root, name))
 
     start_time = time.time()
-    seedAmount = 5
-    months = 2444
+    seedAmount = 1000
+    months = 500
     global entities
     entities = {}
 
-    if months > 1200:
-        chunkCyclesWhole = months / 1200
-        chunkCyclesRemainder = months % 1200
+    # if months > 1200:
+    #     chunkCyclesWhole = months / 1200
+    #     chunkCyclesRemainder = months % 1200
 
-        for month in range(math.floor(chunkCyclesWhole)):
-            generateSeeds(seedAmount)
-            progress(month + 1, chunkCyclesWhole, "cycle: " + str(month))
-            for x in range(1200):
-                progress(x, 1200, "cycle: " + str(x))
-                cycle()
-            save_object(entities, "entities/entities_" + str(month) + ".pkl")
+    #     for month in range(math.floor(chunkCyclesWhole)):
+    #         generateSeeds(seedAmount)
+    #         progress(month + 1, chunkCyclesWhole, "cycle: " + str(month))
+    #         for x in range(1200):
+    #             progress(x, 1200, "cycle: " + str(x))
+    #             cycle()
+    #         save_object(entities, "entities/entities_" + str(month) + ".pkl")
 
-            entities.clear()
-        entities.clear()
+    #         entities.clear()
+    #     entities.clear()
 
-        generateSeeds(seedAmount)
-        for ex in range(chunkCyclesRemainder):
-            progress(ex, chunkCyclesRemainder, "cycle: " + str(ex))
-            cycle()
-        save_object(
-            entities,
-            "entities/entities_" + str(math.floor(chunkCyclesWhole + 1)) + ".pkl",
-        )
-        entities.clear()
-    else:
-        for x in range(months):
-            progress(x, months, "cycle: " + str(x))
-            cycle()
-            save_object(entities, "entities/entities_0.pkl")
+    #     generateSeeds(seedAmount)
+    #     for ex in range(chunkCyclesRemainder):
+    #         progress(ex, chunkCyclesRemainder, "cycle: " + str(ex))
+    #         cycle()
+    #     save_object(
+    #         entities,
+    #         "entities/entities_" + str(math.floor(chunkCyclesWhole + 1)) + ".pkl",
+    #     )
+    #     entities.clear()
+    # else:
+    generateSeeds(seedAmount)
 
-            entities.clear()
+    for month in range(months):
+        progress(month, months, "cycle: " + str(month))
+        cycle(month)
+        save_object(entities, "entities/entities_0.pkl")
+    entities.clear()
     print("\n")
     print("--- %s seconds ---" % (time.time() - start_time))
     living = [(key) for (key) in entities if entities[key].isDead == False]
@@ -345,11 +398,16 @@ def mainLoop():
     totalEntities = []
     totalSize = []
     path = "entities"
+    mergedEntitiesDictionary = {}
     for root, dirs, files in os.walk(path, topdown=False):
         for name in files:
             if name.endswith(".pkl"):
                 with open(os.path.join(root, name), "rb") as inp:
                     f = pickle.load(inp)
+
+                    merged = dictMerge(mergedEntitiesDictionary, f)
+                    mergedEntitiesDictionary.clear()
+                    mergedEntitiesDictionary = merged
                     total = len(f)
                     living = [(key) for (key) in f if f[key].isDead == False]
                     livingTotal.append(len(living))
@@ -362,6 +420,7 @@ def mainLoop():
     print("size of entities(system: BYTES): ", sum(totalSize))
     print("size of entities(system: KILOBYTES): ", sum(totalSize) / 1000)
     print("size of entities(system: MEGABYTES): ", sum(totalSize) / 1000000)
+    createFamilyTree(mergedEntitiesDictionary)
 
 
 mainLoop()
