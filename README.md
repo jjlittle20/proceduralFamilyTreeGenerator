@@ -12,3 +12,7 @@ I want to be able to build deep intertwined lore and history of a fantasy world 
 2. World, Region and Local generation
 3. Items and their history
 4. Events
+
+## Language change
+
+Originally i wanted to write this is python however i quickly realized that with the large number of processes i wasn't getting the performance i wanted. Re-writing this in C++ has given me a great excuse to learn C++ properly, up until now only written arduino C++, as well as improve the speed greatly even when not optimized due to not being proficient with the language.
