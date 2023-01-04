@@ -23,9 +23,25 @@ struct LocationAmount
     int currentSmallCommunities = 0;
 };
 
+class Location
+{
+};
+class Biome
+{
+public:
+    std::string name;
+    std::string type;
+};
+class BiomeType
+{
+};
+
 class LocationType
 {
+public:
     int name;
+    char mapIcon;
+    int seedPopulation;
 };
 
 class Region
@@ -35,35 +51,42 @@ private:
 public:
     int maxHeight = 10;
     int maxWidth = 10;
-    std::string biome;
+    Biome biome;
+    Biome subBiome;
+
     std::vector<std::vector<char>> map;
     char mapIcon = ' ';
 
     Region(std::string locationType)
     {
+        initMap();
         if (locationType == "capital")
         {
             mapIcon = 'C';
-            biome = "fields";
+            biome.type = "settlement";
+            map[maxHeight / 2][maxWidth / 2] = 'C';
         }
         else if (locationType == "default")
         {
             mapIcon = ' ';
-            biome = "water";
+            biome.type = "water";
         }
         else
         {
             mapIcon = 'X';
-            biome = "fields";
+            biome.type = "fields";
         }
-
+    };
+    void initMap()
+    {
         for (size_t i = 0; i < maxHeight; i++)
         {
             std::vector<char> row;
             for (size_t j = 0; j < maxWidth; j++)
             {
+                // if()
 
-                row.push_back('X');
+                row.push_back(' ');
             }
 
             {
@@ -149,6 +172,15 @@ void drunkenWalk(std::vector<std::vector<Region>> &map, int &mapHeight, int &map
     }
     Region capital("capital");
     map[startLocation.first][startLocation.second] = capital;
+    Region region = map[startLocation.first][startLocation.second];
+    for (int i = 0; i < region.map.size(); i++)
+    {
+        for (int j = 0; j < region.map[i].size(); j++)
+        {
+            std::cout << region.map[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
 }
 
 void printMap(std::vector<std::vector<Region>> &map)
