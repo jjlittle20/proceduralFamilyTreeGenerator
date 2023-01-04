@@ -250,7 +250,7 @@ int Human::ID = 0;
 int main()
 {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    int seedPairs = 5;
+    int seedPairs = 50;
     int months = 1200;
 
     generateSeeds(seedPairs);
@@ -260,10 +260,10 @@ int main()
         cycle();
     }
     int entitiesLength = entities.size();
-    for (size_t i = 0; i < entitiesLength; i++)
-    {
-        entities[i].printStats();
-    }
+    // for (size_t i = 0; i < entitiesLength; i++)
+    // {
+    //     entities[i].printStats();
+    // }
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Time difference (sec) = " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1000000.0 << std::endl;
@@ -316,7 +316,7 @@ void generateSeeds(const int seedPairs)
 
     for (size_t i = 0; i < seedPairs; i++)
     {
-
+        // this can become an initialise function.
         Human humanM;
         Human humanF;
         humanM.gender = 'm';
