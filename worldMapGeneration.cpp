@@ -22,10 +22,35 @@ struct LocationAmount
     int currentVillages = 0;
     int currentSmallCommunities = 0;
 };
-
-class Location
+LocationAmount locationAmount;
+class LocationType
 {
+public:
+    std::string displayName;
+    std::string icon;
+    int seedPopulation;
+
+    LocationType(std::string name, std::string mapIcon, int seedPop)
+    {
+        displayName = name;
+        icon = mapIcon;
+        seedPopulation = seedPop;
+    };
 };
+const LocationType locationTypes[] = {{"Capital", "C", 500}, {"City", "c", 250}, {"Large Town", "T", 100}, {"small town", "t", 50}, {"village", "v", 25}, {"small", "s", 10}};
+
+class LocationLookupTable
+{
+public:
+    std::string name;
+    int largeTowns;
+    int smallTowns;
+    int villages;
+    int smallCommunities;
+    LocationType metaData = locationTypes[0];
+};
+LocationLookupTable locationLookupTable[] = {{"capital", 5, 3, 5, 5, locationTypes[0]}, {"city", 5, 3, 5, 5, locationTypes[1]}, {"large town", 0, 5, 10, 5, locationTypes[2]}, {"small town", 0, 0, 10, 10, locationTypes[3]}, {"village", 0, 0, 0, 20, locationTypes[4]}, {"small", 0, 0, 0, 0, locationTypes[5]}};
+
 class Biome
 {
 public:
@@ -36,14 +61,12 @@ class BiomeType
 {
 };
 
-class LocationType
+class Location
 {
 public:
-    int name;
+    std::pair<int, int> coords;
     char mapIcon;
-    int seedPopulation;
 };
-
 class Region
 {
 private:
@@ -53,9 +76,10 @@ public:
     int maxWidth = 10;
     Biome biome;
     Biome subBiome;
-
+    std::vector<Location> locations;
     std::vector<std::vector<char>> map;
     char mapIcon = ' ';
+    bool isEmpty = false;
 
     Region(std::string locationType)
     {
@@ -64,7 +88,15 @@ public:
         {
             mapIcon = 'C';
             biome.type = "settlement";
-            map[maxHeight / 2][maxWidth / 2] = 'C';
+            generateRegionLocations(locationType);
+            locationAmount.currentCapitals = 1;
+        }
+        else if (locationType == "city")
+        {
+            mapIcon = 'c';
+            biome.type = "settlement";
+            generateRegionLocations(locationType);
+            locationAmount.currentCities = locationAmount.currentCities + 1;
         }
         else if (locationType == "default")
         {
@@ -73,9 +105,11 @@ public:
         }
         else
         {
-            mapIcon = 'X';
+            mapIcon = '.';
             biome.type = "fields";
         }
+        finalizeMap();
+        // finalizemap()
     };
     void initMap()
     {
@@ -84,9 +118,8 @@ public:
             std::vector<char> row;
             for (size_t j = 0; j < maxWidth; j++)
             {
-                // if()
 
-                row.push_back(' ');
+                row.push_back('.');
             }
 
             {
@@ -95,10 +128,75 @@ public:
             }
         }
     };
+    void generateRegionLocations(std::string regionCenter)
+    {
+        LocationLookupTable centerLocation;
+        std::pair<int, int> regionMapCenter = {maxHeight / 2, maxWidth / 2};
+        for (size_t i = 0; i < sizeof(locationLookupTable) / sizeof(locationLookupTable[1]); i++)
+        {
+            if (locationLookupTable[i].name == regionCenter)
+            {
+                centerLocation = locationLookupTable[i];
+            }
+        }
+        locations.push_back({regionMapCenter, centerLocation.metaData.icon[0]});
+
+        map[regionMapCenter.first][regionMapCenter.second] = centerLocation.metaData.icon[0];
+        std::vector<std::pair<int, int>> usedCoords;
+        usedCoords.push_back(regionMapCenter);
+
+        for (size_t i = 0; i < centerLocation.villages; i++)
+        {
+            int x = rand() % maxWidth;
+            int y = rand() % maxHeight;
+            std::pair<int, int> validCoords = checkCoords(usedCoords, x, y, maxHeight, maxWidth);
+            locations.push_back({{x, y}, 'v'});
+        }
+    }
+    std::pair<int, int> checkCoords(
+        std::vector<std::pair<int, int>> &usedCoords, int &x, int &y, int maxHeight, int maxWidth)
+    {
+        for (size_t i = 0; i < usedCoords.size(); i++)
+        {
+            if (usedCoords[i].first == x && usedCoords[i].second == y)
+            {
+                if (x >= maxWidth)
+                {
+                    x = x - 1;
+                }
+                if (y >= maxWidth)
+                {
+                    y = y - 1;
+                }
+                else
+                {
+                    x = x + 1;
+                    y = y + 1;
+                }
+                return checkCoords(usedCoords, x, y, maxHeight, maxWidth);
+            }
+            else
+            {
+                return {x, y};
+            }
+        }
+        // neeed to catch this after return
+        return {-1, -1};
+    };
+    void finalizeMap()
+    {
+        for (size_t i = 0; i < locations.size(); i++)
+
+        {
+            std::pair<int, int> locationCoords = locations[i].coords;
+            map[locationCoords.first][locationCoords.second] = locations[i].mapIcon;
+        }
+    }
 };
 
 void printMap(std::vector<std::vector<Region>> &map);
 void drunkenWalk(std::vector<std::vector<Region>> &map, int &mapHeight, int &mapWidth);
+void createRegion(std::vector<std::vector<Region>> &map, std::pair<int, int> &currentLocation, int &currentStep, int &totalSteps);
 
 struct Direction
 {
@@ -119,6 +217,7 @@ int main(int argc, char const *argv[])
         for (size_t j = 0; j < mapWidth; j++)
         {
             Region newRegion("default");
+            newRegion.isEmpty = true;
             row.push_back(newRegion);
         }
 
@@ -142,7 +241,7 @@ void drunkenWalk(std::vector<std::vector<Region>> &map, int &mapHeight, int &map
     const Direction directions[] = {{'u', {-1, 0}}, {'d', {1, 0}}, {'l', {0, -1}}, {'r', {0, 1}}};
     srand(time(NULL));
 
-    for (size_t i = 0; i < totalTiles; i++)
+    for (int i = 0; i < totalTiles; i++)
     {
         int dir = rand() % 4;
         std::pair<int, int> coords = directions[dir].coords;
@@ -166,12 +265,13 @@ void drunkenWalk(std::vector<std::vector<Region>> &map, int &mapHeight, int &map
 
             currentLocation = std::make_pair(height, width);
         }
-        Region newRegion("");
-
-        map[currentLocation.first][currentLocation.second] = newRegion;
+        createRegion(map, currentLocation, i, totalTiles);
     }
+    // create capital
     Region capital("capital");
     map[startLocation.first][startLocation.second] = capital;
+
+    // draw region
     Region region = map[startLocation.first][startLocation.second];
     for (int i = 0; i < region.map.size(); i++)
     {
@@ -180,6 +280,42 @@ void drunkenWalk(std::vector<std::vector<Region>> &map, int &mapHeight, int &map
             std::cout << region.map[i][j] << " ";
         }
         std::cout << std::endl;
+    }
+}
+void progress(int &current, int &total)
+{
+    float currentPercentage = (static_cast<float>(current) / static_cast<float>(total)) * 100;
+    std::cout << currentPercentage << std::endl;
+}
+// global vars
+float offset = 0.0;
+float nextCity = 20;
+
+void createRegion(std::vector<std::vector<Region>> &map, std::pair<int, int> &currentLocation, int &currentStep, int &totalSteps)
+{
+
+    float takenStepsPercentage = (static_cast<float>(currentStep) / static_cast<float>(totalSteps)) * 100;
+    if (map[currentLocation.first][currentLocation.second].isEmpty)
+    {
+
+        if (takenStepsPercentage >= nextCity + offset)
+        {
+            Region newRegion("city");
+            map[currentLocation.first][currentLocation.second] = newRegion;
+            nextCity = nextCity + 20;
+            offset = 0.0;
+        }
+        else
+        {
+
+            Region newRegion("");
+            map[currentLocation.first][currentLocation.second] = newRegion;
+        }
+    }
+    else if (takenStepsPercentage >= nextCity + offset)
+    {
+        float singleStepPercentage = (1 / static_cast<float>(totalSteps)) * 100;
+        offset = offset + singleStepPercentage;
     }
 }
 
