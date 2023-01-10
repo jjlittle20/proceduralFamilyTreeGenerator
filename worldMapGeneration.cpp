@@ -2,6 +2,9 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include "placeGenerator.cpp"
+#include "humanGeneration.cpp"
+#include <cstring>
 class Progress
 {
 public:
@@ -92,13 +95,16 @@ class Location
 public:
     std::pair<int, int> coords;
     char mapIcon;
+    std::string name;
     int seedPairs = 0;
+    std::vector<Human> population;
 };
 class Region
 {
 private:
     /* data */
 public:
+    std::string name = "";
     int maxHeight = 10;
     int maxWidth = 10;
     Biome biome;
@@ -174,16 +180,13 @@ public:
             std::vector<char> row;
             for (size_t j = 0; j < maxWidth; j++)
             {
-
                 row.push_back('.');
             }
 
-            {
-
-                map.push_back(row);
-            }
+            map.push_back(row);
         }
     };
+
     void generateRegionLocations(std::string regionCenter)
     {
         LocationLookupTable centerLocation;
@@ -195,7 +198,7 @@ public:
                 centerLocation = locationLookupTable[i];
             }
         }
-        locations.push_back({regionMapCenter, centerLocation.metaData.icon[0]});
+        locations.push_back({regionMapCenter, centerLocation.metaData.icon[0], generateLocationName(), centerLocation.metaData.seedPopulation, generateSeeds(centerLocation.metaData.seedPopulation)});
 
         map[regionMapCenter.first][regionMapCenter.second] = centerLocation.metaData.icon[0];
         std::vector<std::pair<int, int>> usedCoords;
@@ -203,24 +206,25 @@ public:
 
         for (size_t i = 0; i < centerLocation.largeTowns; i++)
         {
+            int seedPairs = locationLookupTable[2].metaData.seedPopulation;
             int x = rand() % maxWidth;
             int y = rand() % maxHeight;
             std::pair<int, int> validCoords = checkCoords(usedCoords, x, y, maxHeight, maxWidth);
-            locations.push_back({{x, y}, 'T'});
+            locations.push_back({{x, y}, 'T', generateLocationName(), seedPairs, generateSeeds(seedPairs)});
             locationAmount.currentLargeTowns = locationAmount.currentLargeTowns + 1;
         }
-        bool r = locationAmount.currentVillages >= locationAmount.maxVillages;
-        std::cout << r << std::endl;
+
         for (size_t i = 0; i < centerLocation.smallTowns; i++)
         {
             if (locationAmount.currentSmallTowns >= locationAmount.maxSmallTowns)
             {
                 break;
             }
+            int seedPairs = locationLookupTable[3].metaData.seedPopulation;
             int x = rand() % maxWidth;
             int y = rand() % maxHeight;
             std::pair<int, int> validCoords = checkCoords(usedCoords, x, y, maxHeight, maxWidth);
-            locations.push_back({{x, y}, 't'});
+            locations.push_back({{x, y}, 't', generateLocationName(), seedPairs, generateSeeds(seedPairs)});
             locationAmount.currentSmallTowns = locationAmount.currentSmallTowns + 1;
         }
 
@@ -230,10 +234,11 @@ public:
             {
                 break;
             }
+            int seedPairs = locationLookupTable[4].metaData.seedPopulation;
             int x = rand() % maxWidth;
             int y = rand() % maxHeight;
             std::pair<int, int> validCoords = checkCoords(usedCoords, x, y, maxHeight, maxWidth);
-            locations.push_back({{x, y}, 'v'});
+            locations.push_back({{x, y}, 'v', generateLocationName(), seedPairs, generateSeeds(seedPairs)});
             locationAmount.currentVillages = locationAmount.currentVillages + 1;
         }
 
@@ -243,13 +248,20 @@ public:
             {
                 break;
             }
+            int seedPairs = locationLookupTable[5].metaData.seedPopulation;
             int x = rand() % maxWidth;
             int y = rand() % maxHeight;
             std::pair<int, int> validCoords = checkCoords(usedCoords, x, y, maxHeight, maxWidth);
-            locations.push_back({{x, y}, 's'});
+            locations.push_back({{x, y}, 's', generateLocationName(), seedPairs, generateSeeds(seedPairs)});
             locationAmount.currentSmallCommunities = locationAmount.currentSmallCommunities + 1;
         }
     }
+    std::string generateLocationName()
+    {
+        std::string placeName =
+            generateSinglePlaceName();
+        return placeName;
+    };
     std::pair<int, int> checkCoords(
         std::vector<std::pair<int, int>> &usedCoords, int &x, int &y, int maxHeight, int maxWidth)
     {
@@ -331,8 +343,43 @@ public:
 
     void printMap()
     {
+        std::cout << "  ";
+        std::vector<char> secondRow;
+        for (size_t k = 0; k < map[0].size(); k++)
+        {
+
+            std::string columnIntToString = std::to_string(k);
+
+            if (columnIntToString[1] == '\0')
+            {
+                secondRow.push_back(' ');
+            }
+            else
+            {
+                secondRow.push_back(columnIntToString[1]);
+            }
+            std::cout << columnIntToString[0];
+            std::cout << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "  ";
+        for (size_t l = 0; l < secondRow.size(); l++)
+        {
+            std::cout << secondRow[l];
+            std::cout << " ";
+        }
+
+        std::cout << std::endl;
         for (int i = 0; i < map.size(); i++)
         {
+
+            std::string rowIntToString = std::to_string(i);
+
+            if (rowIntToString[1] == '\0')
+            {
+                std::cout << " ";
+            }
+            std::cout << i;
             for (int j = 0; j < map[i].size(); j++)
             {
                 std::cout << map[i][j].mapIcon << " ";
@@ -405,6 +452,65 @@ public:
         }
         return {-1, -1};
     };
+    void printLocationNames()
+    {
+        int regionAmount = map.size();
+        for (size_t i = 0; i < regionAmount; i++)
+        {
+
+            for (int j = 0; j < map[i].size(); j++)
+            {
+                if (map[i][j].locations.size() > 0)
+                {
+                    std::vector<Location> locs = map[i][j].locations;
+                    std::cout << "---------" << std::endl;
+                    for (size_t k = 0; k < locs.size(); k++)
+                    {
+                        std::cout << locs[k].name << std::endl;
+                    }
+                }
+            }
+        }
+    };
+    void printRegion(int x, int y)
+    {
+
+        // check if within map boundries.
+        Region regionToPrint = map[y][x];
+        for (int i = 0; i < regionToPrint.map.size(); i++)
+        {
+            for (int j = 0; j < regionToPrint.map[i].size(); j++)
+            {
+                std::cout << regionToPrint.map[i][j] << " ";
+            }
+            std::cout << std::endl;
+        }
+        std::vector<Location> locs = map[y][x].locations;
+        std::cout << "-----------------------" << std::endl;
+        for (size_t k = 0; k < locs.size(); k++)
+        {
+            std::cout << k << ": ";
+            std::cout << locs[k].name;
+            std::cout << " " << locs[k].population.size() << std::endl;
+        }
+
+        std::cout << "select a location to view population : "
+                  << "0-" << locs.size() - 1 << " : ";
+
+        int locationToView;
+
+        cin >> locationToView;
+        std::vector<Human> populationToPrint = locs[locationToView].population;
+        printLocationPopulation(populationToPrint);
+    };
+    void printLocationPopulation(std::vector<Human> &pop)
+    {
+        for (size_t i = 0; i < pop.size(); i++)
+        {
+
+            std::cout << pop[i].name.first << " " << pop[i].name.second << std::endl;
+        }
+    };
 };
 
 WorldMap worldMap;
@@ -421,8 +527,18 @@ int main(int argc, char const *argv[])
     drunkenWalk(worldMap.map, worldMap.mapHeight, worldMap.mapWidth);
     worldMap.generateOtherSettlements();
     worldMap.printMap();
+    // worldMap.printLocationNames();
     locationAmount.printStats();
-    std::cout << "Finished" << std::endl;
+    std::cout << "Finished Generation" << std::endl;
+    std::cout << std::endl;
+    std::cout << "To explore the map enter the coords you would like to view..." << std::endl;
+    std::cout << "X Axis: ";
+    int x;
+    int y;
+    std::cin >> x;
+    std::cout << "Y Axis: ";
+    std::cin >> y;
+    worldMap.printRegion(x, y);
     return 0;
 }
 
@@ -464,17 +580,6 @@ void drunkenWalk(std::vector<std::vector<Region>> &map, int &mapHeight, int &map
     Region capital("capital");
     map[startLocation.first][startLocation.second] = capital;
     worldMap.capital.push_back(startLocation);
-
-    // draw region
-    Region region = map[startLocation.first][startLocation.second];
-    for (int i = 0; i < region.map.size(); i++)
-    {
-        for (int j = 0; j < region.map[i].size(); j++)
-        {
-            std::cout << region.map[i][j] << " ";
-        }
-        std::cout << std::endl;
-    }
 }
 
 // global vars

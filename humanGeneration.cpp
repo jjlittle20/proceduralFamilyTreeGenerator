@@ -7,7 +7,6 @@
 
 using namespace std;
 
-void generateSeeds(const int seedPairs);
 void cycle();
 
 int firstNamesLengthMale = maleBritishFirstNames.size();
@@ -16,7 +15,7 @@ int surnamesLength = britishSurnames.size();
 
 class Human;
 static std::vector<Human> entities;
-
+std::vector<Human> generateSeeds(const int seedPairs);
 class Relationship
 {
 private:
@@ -247,7 +246,7 @@ public:
 
 int Human::ID = 0;
 
-int main()
+int generateHumans()
 {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     int seedPairs = 50;
@@ -311,9 +310,9 @@ void cycle()
     }
 }
 
-void generateSeeds(const int seedPairs)
+std::vector<Human> generateSeeds(const int seedPairs)
 {
-
+    std::vector<Human> humans;
     for (size_t i = 0; i < seedPairs; i++)
     {
         // this can become an initialise function.
@@ -341,7 +340,8 @@ void generateSeeds(const int seedPairs)
         humanF.partner.relationName = humanM.name;
         humanF.lover.relationName = humanM.name;
 
-        entities.push_back(humanM);
-        entities.push_back(humanF);
+        humans.push_back(humanM);
+        humans.push_back(humanF);
     }
+    return humans;
 }
